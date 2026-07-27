@@ -57,6 +57,41 @@ button {
   border-bottom: 1px solid var(--line);
 }
 
+.header-left {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.back-home {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 10px;
+  color: var(--soft);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  text-decoration: none;
+  transition:
+    color 150ms ease,
+    border-color 150ms ease,
+    background 150ms ease;
+}
+
+.back-home:hover {
+  color: var(--accent);
+  background: rgb(236 231 222 / 3%);
+  border-color: var(--accent);
+}
+
+.back-home:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 2px;
+}
+
 .brand {
   display: inline-flex;
   gap: 10px;
@@ -466,6 +501,10 @@ footer p {
     text-align: right;
   }
 
+  .header-left {
+    gap: 10px;
+  }
+
   .recognizer {
     margin-top: 28px;
     border-radius: 4px;
@@ -496,6 +535,28 @@ footer p {
     gap: 10px;
     flex-direction: column;
     margin-top: 48px;
+  }
+}
+
+@media (max-width: 420px) {
+  .back-home {
+    width: 34px;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .back-home-label {
+    position: absolute;
+    overflow: hidden;
+    width: 1px;
+    height: 1px;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .brand {
+    gap: 6px;
+    font-size: 0.92rem;
   }
 }
 

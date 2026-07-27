@@ -7,16 +7,27 @@
       name="description"
       content="Draw a handwritten digit and see a neural network recognize it."
     />
-    <title>ShahDigits — Handwritten Digit Recognition</title>
+    <title>ShahDigits</title>
+    <script>
+      if (window.location.protocol === "file:") {
+        window.location.replace("http://127.0.0.1:8000/");
+      }
+    </script>
     <link rel="stylesheet" href="/style.css" />
   </head>
   <body>
     <main class="page-shell">
       <header class="site-header">
-        <a class="brand" href="/" aria-label="ShahDigits home">
-          <span class="brand-mark" aria-hidden="true">∿</span>
-          <span>ShahDigits</span>
-        </a>
+        <div class="header-left">
+          <a class="back-home" href="https://shahdad.ca/" aria-label="Back to shahdad.ca">
+            <span aria-hidden="true">←</span>
+            <span class="back-home-label">Home</span>
+          </a>
+          <a class="brand" href="/" aria-label="ShahDigits home">
+            <span class="brand-mark" aria-hidden="true">∿</span>
+            <span>ShahDigits</span>
+          </a>
+        </div>
         <div class="connection" id="connection" role="status">
           <span class="connection-dot" aria-hidden="true"></span>
           <span id="connectionText">Connecting to model…</span>
