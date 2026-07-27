@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Draw a handwritten digit and see a neural network recognize it."
+    />
+    <title>ShahDigits — Handwritten Digit Recognition</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <main class="page-shell">
+      <header class="site-header">
+        <a class="brand" href="/" aria-label="ShahDigits home">
+          <span class="brand-mark" aria-hidden="true">∿</span>
+          <span>ShahDigits</span>
+        </a>
+        <div class="connection" id="connection" role="status">
+          <span class="connection-dot" aria-hidden="true"></span>
+          <span id="connectionText">Connecting to model…</span>
+        </div>
+      </header>
+
+      <section class="recognizer" aria-label="Digit recognition workspace">
+        <div class="drawing-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="panel-kicker">01 · Your input</p>
+              <h2>Draw a digit</h2>
+            </div>
+            <p class="drawing-tip">Use your mouse, trackpad, or finger</p>
+          </div>
+
+          <div class="canvas-frame">
+            <canvas
+              id="drawingCanvas"
+              width="560"
+              height="560"
+              tabindex="0"
+              aria-label="White drawing canvas. Draw one black digit."
+            ></canvas>
+            <span class="canvas-hint" id="canvasHint" aria-hidden="true">0–9</span>
+          </div>
+
+          <div class="canvas-actions">
+            <button class="button button-secondary" id="clearButton" type="button">
+              Clear canvas
+            </button>
+            <button class="button button-primary" id="predictButton" type="button">
+              <span id="predictButtonText">Recognize digit</span>
+              <span class="button-arrow" aria-hidden="true">→</span>
+            </button>
+          </div>
+        </div>
+
+        <aside class="result-panel" aria-labelledby="result-title">
+          <div class="panel-heading">
+            <div>
+              <p class="panel-kicker">02 · Model output</p>
+              <h2 id="result-title">Recognition</h2>
+            </div>
+          </div>
+
+          <div class="prediction-hero" aria-live="polite">
+            <span class="prediction-label">I think you drew</span>
+            <strong class="prediction-digit" id="predictionDigit">—</strong>
+            <span class="prediction-confidence" id="predictionConfidence">
+              Waiting for a drawing
+            </span>
+          </div>
+
+          <div class="choice-section">
+            <div class="choice-heading">
+              <span>Top 3 choices</span>
+              <span>Confidence</span>
+            </div>
+            <ol class="choice-list" id="topChoicesList"></ol>
+          </div>
+
+          <p class="result-message" id="resultMessage" role="status">
+            Draw a single digit, then ask the model to recognize it.
+          </p>
+        </aside>
+      </section>
+
+      <footer>
+        <p>Running locally with FastAPI + PyTorch</p>
+        <p>No drawing is stored by this demo.</p>
+      </footer>
+    </main>
+
+    <script src="/app.js" defer></script>
+  </body>
+</html>

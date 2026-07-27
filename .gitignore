@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.pyc
+data/
+.DS_Store
+.env
+*.log
+
+# Keep local test images and proprietary font binaries off GitHub.
+examples/
+web/assets/fonts/
+
+# Publish only the trained model needed by the live application.
+models/*
+!models/mnist_cnn.pt
