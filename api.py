@@ -9,7 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from PIL import Image, UnidentifiedImageError
 from pydantic import BaseModel
 
-from image_processing import image_to_tensor
+from image_processing import InvalidDigitDrawingError, image_to_tensor
 from model import MnistCNN
 
 
@@ -21,9 +21,11 @@ WEB_DIR = PROJECT_DIR / "web"
 
 
 class PredictionResponse(BaseModel):
-    digit: int
-    confidence: float
+    accepted: bool
+    digit: int | None
+    confidence: float | None
     probabilities: dict[str, float]
+    message: str
 
 
 # These lines run once when the backend starts, not once per request.
@@ -89,6 +91,14 @@ async def predict(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="The upload is not a readable PNG or JPEG.",
         ) from None
+    except InvalidDigitDrawingError as error:
+        return PredictionResponse(
+            accepted=False,
+            digit=None,
+            confidence=None,
+            probabilities={},
+            message=str(error),
+        )
     except ValueError as error:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -107,9 +117,11 @@ async def predict(
     }
 
     return PredictionResponse(
+        accepted=True,
         digit=predicted_digit,
         confidence=confidence,
         probabilities=probability_map,
+        message="Prediction complete. Clear the canvas to try another digit.",
     )
 
 

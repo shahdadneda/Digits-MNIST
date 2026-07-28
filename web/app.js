@@ -6,6 +6,7 @@ const predictButton = document.querySelector("#predictButton");
 const predictButtonText = document.querySelector("#predictButtonText");
 const predictionDigit = document.querySelector("#predictionDigit");
 const predictionConfidence = document.querySelector("#predictionConfidence");
+const predictionHero = document.querySelector(".prediction-hero");
 const topChoicesList = document.querySelector("#topChoicesList");
 const resultMessage = document.querySelector("#resultMessage");
 const connection = document.querySelector("#connection");
@@ -15,10 +16,12 @@ let isDrawing = false;
 let hasDrawing = false;
 let lastPoint = null;
 
-function showChoicePlaceholder() {
+function showChoicePlaceholder(
+  message = "Your three strongest matches will appear here.",
+) {
   const placeholder = document.createElement("li");
   placeholder.className = "choice-placeholder";
-  placeholder.textContent = "Your three strongest matches will appear here.";
+  placeholder.textContent = message;
   topChoicesList.replaceChildren(placeholder);
 }
 
@@ -62,6 +65,7 @@ function showTopChoices(probabilities) {
 function resetResults() {
   predictionDigit.textContent = "—";
   predictionConfidence.textContent = "Waiting for a drawing";
+  predictionHero.classList.remove("is-rejected");
   resultMessage.textContent =
     "Draw a single digit, then ask the model to recognize it.";
   resultMessage.classList.remove("is-error");
@@ -146,12 +150,21 @@ function canvasBlob() {
 
 function showPrediction(data) {
   const confidencePercent = data.confidence * 100;
+  predictionHero.classList.remove("is-rejected");
   predictionDigit.textContent = String(data.digit);
   predictionConfidence.textContent = `${confidencePercent.toFixed(2)}% confidence`;
-  resultMessage.textContent =
-    "Prediction complete. Clear the canvas to try another digit.";
+  resultMessage.textContent = data.message;
   resultMessage.classList.remove("is-error");
   showTopChoices(data.probabilities);
+}
+
+function showRejected(message) {
+  predictionHero.classList.add("is-rejected");
+  predictionDigit.textContent = "?";
+  predictionConfidence.textContent = "Not one clear digit";
+  resultMessage.textContent = message;
+  resultMessage.classList.add("is-error");
+  showChoicePlaceholder("No digit scores are shown for rejected drawings.");
 }
 
 function showError(message) {
@@ -187,7 +200,11 @@ async function predictDrawing() {
       throw new Error(data.detail ?? "The model could not process this drawing.");
     }
 
-    showPrediction(data);
+    if (data.accepted) {
+      showPrediction(data);
+    } else {
+      showRejected(data.message);
+    }
   } catch (error) {
     showError(error.message ?? "The backend could not be reached.");
   } finally {

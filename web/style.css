@@ -360,6 +360,14 @@ h2 {
   line-height: 1.4;
 }
 
+.prediction-hero.is-rejected .prediction-digit {
+  color: var(--error);
+}
+
+.prediction-hero.is-rejected .prediction-confidence {
+  color: var(--error);
+}
+
 .choice-section {
   flex: 1;
 }

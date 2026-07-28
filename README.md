@@ -87,3 +87,18 @@ http://127.0.0.1:8000
 
 Draw one digit, select **Recognize digit**, and the page will upload the canvas
 to `/predict` and display the model's three most likely choices.
+
+## Invalid-drawing rejection
+
+The API can abstain instead of forcing every input into one of the ten digit
+classes. It rejects drawings that fill or span almost the entire canvas,
+or contain several unrelated marks. Rejected responses have
+`"accepted": false` and do not expose a misleading digit or confidence score.
+Drawings that pass those structural checks always show the model's closest
+digit match, even when its confidence is below 80%.
+
+This input gate handles obvious scribbles, but softmax confidence alone cannot
+prove that an unfamiliar image is a digit. For a production-grade open-set
+recognizer, train an explicit `not_a_digit` class with representative negative
+examples (scribbles, shapes, letters, blank/noisy images) and tune its rejection
+threshold on a separate validation set.

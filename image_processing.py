@@ -1,5 +1,6 @@
 """Convert an ordinary digit image into the format expected by MNIST."""
 
+from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
@@ -10,6 +11,24 @@ from torchvision import transforms
 
 CANVAS_SIZE = 28
 DIGIT_SIZE = 20
+MAX_INK_COVERAGE = 0.45
+MAX_CANVAS_SPAN = 0.96
+COMPONENT_ANALYSIS_SIZE = 128
+
+
+class InvalidDigitDrawingError(ValueError):
+    """Raised when an image is visible but does not resemble one isolated mark."""
+
+
+@dataclass(frozen=True)
+class DrawingAnalysis:
+    """Simple shape measurements taken before MNIST crop-and-center processing."""
+
+    ink_coverage: float
+    width_span: float
+    height_span: float
+    significant_components: int
+    largest_component_share: float
 
 
 def _flatten_transparency(image: Image.Image) -> Image.Image:
@@ -77,8 +96,10 @@ def _move_center_of_mass_to_middle(pixels: np.ndarray) -> np.ndarray:
     return shifted
 
 
-def prepare_digit_image(image: Image.Image) -> Image.Image:
-    """Return a centered 28x28 white-on-black version of a digit image."""
+def _foreground_pixels_and_mask(
+    image: Image.Image,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Return white-on-black intensities and a mask of meaningful ink."""
     grayscale = _flatten_transparency(image)
     pixels = np.asarray(grayscale, dtype=np.uint8)
 
@@ -102,9 +123,134 @@ def prepare_digit_image(image: Image.Image) -> Image.Image:
 
     threshold = max(20, round(strongest_pixel * 0.15))
     mask = pixels >= threshold
-    y_coordinates, x_coordinates = np.where(mask)
-    if len(x_coordinates) == 0:
+    if not mask.any():
         raise ValueError("No digit could be found in the image.")
+    return pixels, mask
+
+
+def _component_areas(mask: np.ndarray) -> list[int]:
+    """Measure 8-connected foreground regions on a bounded-size mask."""
+    height, width = mask.shape
+    if max(height, width) > COMPONENT_ANALYSIS_SIZE:
+        scale = COMPONENT_ANALYSIS_SIZE / max(height, width)
+        resized_width = max(1, round(width * scale))
+        resized_height = max(1, round(height * scale))
+        mask_image = Image.fromarray(mask.astype(np.uint8) * 255, mode="L")
+        mask = (
+            np.asarray(
+                mask_image.resize(
+                    (resized_width, resized_height),
+                    Image.Resampling.NEAREST,
+                ),
+                dtype=np.uint8,
+            )
+            >= 128
+        )
+
+    height, width = mask.shape
+    visited = np.zeros_like(mask, dtype=bool)
+    component_areas: list[int] = []
+
+    for start_y, start_x in zip(*np.where(mask)):
+        if visited[start_y, start_x]:
+            continue
+
+        stack = [(int(start_y), int(start_x))]
+        visited[start_y, start_x] = True
+        area = 0
+
+        while stack:
+            current_y, current_x = stack.pop()
+            area += 1
+
+            for neighbor_y in range(
+                max(0, current_y - 1),
+                min(height, current_y + 2),
+            ):
+                for neighbor_x in range(
+                    max(0, current_x - 1),
+                    min(width, current_x + 2),
+                ):
+                    if (
+                        mask[neighbor_y, neighbor_x]
+                        and not visited[neighbor_y, neighbor_x]
+                    ):
+                        visited[neighbor_y, neighbor_x] = True
+                        stack.append((neighbor_y, neighbor_x))
+
+        component_areas.append(area)
+
+    return sorted(component_areas, reverse=True)
+
+
+def _analyze_mask(mask: np.ndarray) -> DrawingAnalysis:
+    y_coordinates, x_coordinates = np.where(mask)
+    height, width = mask.shape
+    component_areas = _component_areas(mask)
+    largest_component = component_areas[0]
+    minimum_component_area = max(
+        3,
+        round(sum(component_areas) * 0.002),
+        round(largest_component * 0.05),
+    )
+    significant_components = [
+        area for area in component_areas if area >= minimum_component_area
+    ]
+
+    return DrawingAnalysis(
+        ink_coverage=float(mask.mean()),
+        width_span=float((x_coordinates.max() - x_coordinates.min() + 1) / width),
+        height_span=float((y_coordinates.max() - y_coordinates.min() + 1) / height),
+        significant_components=len(significant_components),
+        largest_component_share=float(
+            largest_component / sum(significant_components)
+        ),
+    )
+
+
+def analyze_digit_drawing(image: Image.Image) -> DrawingAnalysis:
+    """Analyze the unprocessed drawing, preserving layout and connectivity."""
+    _, mask = _foreground_pixels_and_mask(image)
+    return _analyze_mask(mask)
+
+
+def _validate_analysis(analysis: DrawingAnalysis) -> None:
+    """Reject obvious non-digits before preprocessing makes them digit-like."""
+    if analysis.ink_coverage > MAX_INK_COVERAGE:
+        raise InvalidDigitDrawingError(
+            "That drawing fills too much of the canvas to be one digit. "
+            "Clear it and draw a single 0–9 with space around it."
+        )
+
+    if (
+        analysis.width_span > MAX_CANVAS_SPAN
+        or analysis.height_span > MAX_CANVAS_SPAN
+    ):
+        raise InvalidDigitDrawingError(
+            "That drawing reaches across nearly the whole canvas. "
+            "Draw one centered digit with a little space around every edge."
+        )
+
+    looks_fragmented = (
+        analysis.significant_components >= 4
+        or (
+            analysis.significant_components >= 3
+            and analysis.largest_component_share < 0.80
+        )
+    )
+    if looks_fragmented:
+        raise InvalidDigitDrawingError(
+            "That drawing contains several separate marks instead of one clear "
+            "digit. Clear it and draw a single 0–9."
+        )
+
+
+def prepare_digit_image(image: Image.Image) -> Image.Image:
+    """Return a validated, centered 28x28 white-on-black digit image."""
+    pixels, mask = _foreground_pixels_and_mask(image)
+    _validate_analysis(_analyze_mask(mask))
+
+    y_coordinates, x_coordinates = np.where(mask)
 
     left = int(x_coordinates.min())
     right = int(x_coordinates.max()) + 1
